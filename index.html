@@ -60,7 +60,22 @@
       f.className = ""; sp.className = "hide";
       setTimeout(function(){ sp.remove(); }, 400);
     }
-    window.addEventListener("message", function(e){ if (e.data && e.data.att === "ready") ready(); });
+    window.addEventListener("message", function(e){
+      var d = e.data; if (!d || !d.att) return;
+      if (d.att === "ready") ready();
+      // 幫網頁記住設定（提醒開關、姓名、草稿等），關掉重開也不會不見
+      if (d.att === "store-get"){
+        var all = {};
+        try { for (var i = 0; i < localStorage.length; i++){ var k = localStorage.key(i); if (/^att_/.test(k)) all[k] = localStorage.getItem(k); } } catch(err){}
+        try { e.source.postMessage({ att:"store-data", d: all }, "*"); } catch(err){}
+      }
+      if (d.att === "store-set" && typeof d.k === "string" && /^att_[a-z0-9_]{1,40}$/.test(d.k)){
+        try {
+          if (d.v == null) localStorage.removeItem(d.k);
+          else if (String(d.v).length < 20000) localStorage.setItem(d.k, String(d.v));
+        } catch(err){}
+      }
+    });
     f.addEventListener("load", function(){ setTimeout(ready, 6000); });
     setTimeout(ready, 15000);
   }
