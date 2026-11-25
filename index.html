@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>出勤回報</title>
+<!-- 加到主畫面的圖示與名稱 -->
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-title" content="出勤回報">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="theme-color" content="#0f172a">
+<style>
+  html,body{margin:0;height:100%;background:#0f172a}
+  iframe{position:fixed;inset:0;width:100%;height:100%;border:0;background:#f1f5f9}
+  .msg{font-family:-apple-system,"Noto Sans TC",sans-serif;color:#e2e8f0;padding:40px 24px;line-height:1.7}
+</style>
+</head>
+<body>
+<script>
+  /* ↓↓↓ 把 Apps Script 部署後的網址（結尾是 /exec）貼在這裡 ↓↓↓ */
+  var GAS_URL = "https://script.google.com/macros/s/AKfycbwwm1j428gBgtsh-kMHKP2q2OQa5G-b_RX-Avwy_XfqmRwlPGzYHZdoOOg-XHJAQl0Y/exec";
+
+  /* 把這個頁面網址後面的 ?page=...&key=... 原封不動交給 Apps Script，
+     所以管理者、主管、回報三種網址都共用這一個頁面 */
+  var q = location.search || "";
+  if (!q){
+    document.body.innerHTML = '<div class="msg">網址不完整，請使用管理者提供的專屬網址開啟。</div>';
+  } else {
+    var f = document.createElement("iframe");
+    // wrap=1 讓回報頁知道是從外框頁開啟（狀態列由這一頁處理）
+    f.src = GAS_URL + q + "&wrap=1";
+    f.setAttribute("allow", "clipboard-write; clipboard-read; autoplay");
+    f.title = "出勤回報";
+    document.body.appendChild(f);
+  }
+</script>
+</body>
+</html>
