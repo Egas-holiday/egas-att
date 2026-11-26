@@ -42,6 +42,18 @@
   #vidBg .vh button{font:inherit;font-size:15px;font-weight:700;color:#fff;background:#334155;border:0;border-radius:10px;padding:9px 14px}
   #vidBg video{flex:1;width:100%;min-height:0;background:#000}
   #vidBg .ve{color:#fca5a5;padding:16px;font-size:14px;line-height:1.6;word-break:break-all}
+  #a2hs{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;justify-content:center;font-family:-apple-system,"Noto Sans TC",sans-serif;pointer-events:none}
+  #a2hs .ac{pointer-events:auto;background:#fff;color:#0f172a;width:100%;max-width:460px;border-radius:20px 20px 0 0;box-shadow:0 -8px 30px rgba(15,23,42,.25);padding:18px 18px calc(16px + env(safe-area-inset-bottom));box-sizing:border-box}
+  #a2hs .at{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+  #a2hs .at img{width:48px;height:48px;border-radius:12px}
+  #a2hs .at b{display:block;font-size:16.5px}
+  #a2hs .at span{font-size:13px;color:#64748b}
+  #a2hs ol{margin:0 0 14px;padding-left:22px;font-size:15px;line-height:1.9;color:#334155}
+  #a2hs ol b{color:#0f172a}
+  #a2hs .ic{display:inline-block;vertical-align:-4px;width:20px;height:20px;color:#2563eb}
+  #a2hs .ab{display:flex;gap:10px}
+  #a2hs .ab button{flex:1;font:inherit;font-size:15.5px;font-weight:700;border-radius:12px;padding:12px;border:1px solid #cbd5e1;background:#f8fafc;color:#0f172a}
+  #a2hs .ab button.pri{background:#3f7a52;border-color:#3f7a52;color:#fff}
   .msg{font-family:-apple-system,"Noto Sans TC",sans-serif;color:#e2e8f0;padding:40px 24px;line-height:1.7}
 </style>
 </head>
@@ -79,6 +91,43 @@
     var pr = v.play(); if (pr && pr.catch) pr.catch(function(){});
   }
 
+
+  /* ───── 加入主畫面教學（用瀏覽器打開時才顯示；從主畫面圖示打開就不顯示）───── */
+  var A2HS_PROMPT = null;
+  window.addEventListener("beforeinstallprompt", function(e){ e.preventDefault(); A2HS_PROMPT = e; });
+  var SHARE_SVG = '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M8 7l4-4 4 4"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>';
+  var PLUS_SVG = '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 8v8M8 12h8"/></svg>';
+  var DOTS_SVG = '<svg class="ic" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
+  function isMobile(){ return isIOS() || /android/i.test(navigator.userAgent); }
+  function inAppBrowser(){ return /Line\/|FBAN|FBAV|Instagram|MicroMessenger/i.test(navigator.userAgent); }
+  function a2hsSteps(){
+    if (inAppBrowser()) return '<ol><li>點右上角 ' + DOTS_SVG + ' 或「…」</li><li>選<b>「用預設瀏覽器開啟」</b>（iPhone 是 Safari，Android 是 Chrome）</li><li>打開後再照畫面下方的教學加入主畫面</li></ol>';
+    if (isIOS()) return '<ol><li>點畫面下方（或網址列旁）的<b>分享</b> ' + SHARE_SVG + '</li><li>往下滑，點<b>「加入主畫面」</b> ' + PLUS_SVG + '</li><li>名稱維持「出勤回報」，點右上角<b>「新增」</b></li><li>之後從主畫面的圖示打開</li></ol>';
+    if (A2HS_PROMPT) return '<ol><li>點下方<b>「加入主畫面」</b>按鈕</li><li>再點<b>「安裝」</b>或<b>「新增」</b></li><li>之後從主畫面的圖示打開</li></ol>';
+    return '<ol><li>點右上角 ' + DOTS_SVG + '</li><li>點<b>「加到主畫面」</b>或<b>「安裝應用程式」</b></li><li>再點<b>「新增」</b>或<b>「安裝」</b></li><li>之後從主畫面的圖示打開</li></ol>';
+  }
+  function a2hsClose(remember){
+    var el = document.getElementById("a2hs"); if (el) el.remove();
+    if (remember) try { localStorage.setItem("att_a2hs_skip", String(Date.now())); } catch(e){}
+  }
+  function showA2hs(force){
+    if (isStandalone() || (!force && !isMobile())) return;
+    if (!force){ var last = 0; try { last = Number(localStorage.getItem("att_a2hs_skip") || 0); } catch(e){} if (Date.now() - last < 7 * 864e5) return; }
+    a2hsClose(false);
+    var el = document.createElement("div"); el.id = "a2hs";
+    el.innerHTML = '<div class="ac"><div class="at"><img src="apple-touch-icon.png" alt=""><div><b>加入主畫面，像 App 一樣使用</b><span>下次點圖示就能打開，也能開啟手機通知</span></div></div>'
+      + a2hsSteps() + '<div class="ab"><button type="button" data-l>之後再說</button>'
+      + (A2HS_PROMPT && !isIOS() && !inAppBrowser() ? '<button type="button" class="pri" data-i>加入主畫面</button>' : '<button type="button" class="pri" data-ok>知道了</button>') + '</div></div>';
+    document.body.appendChild(el);
+    el.querySelector("[data-l]").onclick = function(){ a2hsClose(true); };
+    var ok = el.querySelector("[data-ok]"); if (ok) ok.onclick = function(){ a2hsClose(true); };
+    var ins = el.querySelector("[data-i]");
+    if (ins) ins.onclick = function(){
+      var pr = A2HS_PROMPT; A2HS_PROMPT = null; a2hsClose(false);
+      pr.prompt(); pr.userChoice.then(function(c){ if (c.outcome !== "accepted") a2hsClose(true); }).catch(function(){});
+    };
+  }
+
   /* ───── 手機推播通知 ───── */
   var PUSH = null;
   function b64uToU8(s){ s = s.replace(/-/g,"+").replace(/_/g,"/"); while (s.length % 4) s += "="; var r = atob(s), u = new Uint8Array(r.length); for (var i = 0; i < r.length; i++) u[i] = r.charCodeAt(i); return u; }
@@ -95,7 +144,7 @@
   function swUrl(){ return "sw.js?g=" + encodeURIComponent(GAS_URL) + "&t=" + encodeURIComponent(PUSH.token) + "&u=" + encodeURIComponent(location.href.replace(/[?&]_r=\d+/, "")); }
   function pushOpen(){
     var noSupport = !("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window);
-    if (isIOS() && !isStandalone()){ pushCard("手機通知", "請先把網頁「加入主畫面」，再從主畫面的圖示打開，才能開啟通知。", [["知道了", pushClose, "pri"]]); return; }
+    if (isIOS() && !isStandalone()){ pushCard("手機通知", "請先把網頁「加入主畫面」，再從主畫面的圖示打開，才能開啟通知。", [["看加入主畫面教學", function(){ pushClose(); showA2hs(true); }, "pri"], ["關閉", pushClose]]); return; }
     if (noSupport){ pushCard("手機通知", "這個瀏覽器不支援通知。iPhone 需要 iOS 16.4 以上，並從主畫面圖示打開；Android 請用 Chrome。", [["知道了", pushClose, "pri"]]); return; }
     if (Notification.permission === "denied"){ pushCard("通知已被封鎖", "請到手機「設定」→「通知」找到「出勤回報」，開啟「允許通知」後再試一次。", [["知道了", pushClose, "pri"]]); return; }
     navigator.serviceWorker.getRegistration().then(function(reg){
@@ -162,6 +211,7 @@
       if (done) return; done = true;
       f.className = ""; sp.className = "hide";
       setTimeout(function(){ sp.remove(); }, 400);
+      setTimeout(function(){ showA2hs(false); }, 2500);
     }
     window.addEventListener("message", function(e){
       var d = e.data; if (!d || !d.att) return;
