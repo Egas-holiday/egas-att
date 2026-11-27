@@ -99,9 +99,17 @@
   var PLUS_SVG = '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 8v8M8 12h8"/></svg>';
   var DOTS_SVG = '<svg class="ic" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
   function isMobile(){ return isIOS() || /android/i.test(navigator.userAgent); }
-  function inAppBrowser(){ return /Line\/|FBAN|FBAV|Instagram|MicroMessenger/i.test(navigator.userAgent); }
+  function inAppBrowser(){
+    var ua = navigator.userAgent || "";
+    if (/Line\/|FBAN|FBAV|Instagram|MicroMessenger|teamplus|team\+/i.test(ua)) return true;
+    // iPhone：Safari、Chrome、Edge、Firefox 以外的（例如公司 App、通訊軟體裡開啟的網頁）
+    if (isIOS() && !isStandalone() && !/Safari\//.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua)) return true;
+    // Android：App 內嵌的網頁會帶「; wv)」
+    if (/Android/i.test(ua) && /; wv\)/.test(ua)) return true;
+    return false;
+  }
   function a2hsSteps(){
-    if (inAppBrowser()) return '<ol><li>點右上角 ' + DOTS_SVG + ' 或「…」</li><li>選<b>「用預設瀏覽器開啟」</b>（iPhone 是 Safari，Android 是 Chrome）</li><li>打開後再照畫面下方的教學加入主畫面</li></ol>';
+    if (inAppBrowser()) return '<ol><li>你現在是在 App 裡開啟網頁，這裡不能加入主畫面</li><li>點右上角 ' + DOTS_SVG + ' 或「…」</li><li>選<b>「在瀏覽器中開啟」</b>（或「用 Safari 開啟」「用預設瀏覽器開啟」）</li><li>在 ' + (isIOS() ? 'Safari' : 'Chrome') + ' 打開後，再照畫面下方的教學加入主畫面</li></ol>';
     if (isIOS()) return '<ol><li>點畫面下方（或網址列旁）的<b>分享</b> ' + SHARE_SVG + '</li><li>往下滑，點<b>「加入主畫面」</b> ' + PLUS_SVG + '</li><li>名稱維持「出勤回報」，點右上角<b>「新增」</b></li><li>之後從主畫面的圖示打開</li></ol>';
     if (A2HS_PROMPT) return '<ol><li>點下方<b>「加入主畫面」</b>按鈕</li><li>再點<b>「安裝」</b>或<b>「新增」</b></li><li>之後從主畫面的圖示打開</li></ol>';
     return '<ol><li>點右上角 ' + DOTS_SVG + '</li><li>點<b>「加到主畫面」</b>或<b>「安裝應用程式」</b></li><li>再點<b>「新增」</b>或<b>「安裝」</b></li><li>之後從主畫面的圖示打開</li></ol>';
