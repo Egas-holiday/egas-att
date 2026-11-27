@@ -128,6 +128,25 @@
     };
   }
 
+
+  /* 告訴網頁目前手機通知的狀態（顯示在「通知」按鈕上） */
+  var STATE_SRC = null;
+  function pushState(){
+    return new Promise(function(done){
+      var noSupport = !("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window);
+      if (isIOS() && !isStandalone()) return done("need-install");
+      if (noSupport) return done("unsupported");
+      if (Notification.permission === "denied") return done("denied");
+      navigator.serviceWorker.getRegistration().then(function(reg){ return reg ? reg.pushManager.getSubscription() : null; })
+        .then(function(sub){ done(sub && Notification.permission === "granted" ? "on" : "off"); })
+        .catch(function(){ done("off"); });
+    });
+  }
+  function sendState(src){
+    src = src || STATE_SRC; if (!src) return;
+    pushState().then(function(st){ try { src.postMessage({ att:"push-state", state: st }, "*"); } catch(e){} });
+  }
+
   /* ───── 手機推播通知 ───── */
   var PUSH = null;
   function b64uToU8(s){ s = s.replace(/-/g,"+").replace(/_/g,"/"); while (s.length % 4) s += "="; var r = atob(s), u = new Uint8Array(r.length); for (var i = 0; i < r.length; i++) u[i] = r.charCodeAt(i); return u; }
@@ -179,6 +198,7 @@
     var ep = sub.endpoint;
     sub.unsubscribe().catch(function(){}).then(function(){
       PUSH.src.postMessage({ att:"push-unsub", endpoint: ep }, "*");
+      setTimeout(function(){ sendState(PUSH.src); }, 300);
       pushCard("已關閉通知", "這支手機不會再收到新回報通知。", [["知道了", pushClose, "pri"]]);
     });
   }
@@ -217,7 +237,9 @@
       var d = e.data; if (!d || !d.att) return;
       if (d.att === "ready") ready();
       if (d.att === "push-open"){ PUSH = { key: String(d.key || ""), token: String(d.token || ""), src: e.source }; pushOpen(); }
-      if (d.att === "push-result") pushResult(d);
+      if (d.att === "push-result"){ pushResult(d); sendState(); }
+      if (d.att === "push-state-get"){ STATE_SRC = e.source; sendState(e.source); }
+      if (d.att === "a2hs-show") showA2hs(true);
       if (d.att === "video-play") playVideo(d, e.source);
       // 幫網頁記住設定（提醒開關、姓名、草稿等），關掉重開也不會不見
       if (d.att === "store-get"){
