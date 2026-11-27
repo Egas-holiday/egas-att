@@ -192,7 +192,15 @@
       }).then(function(sub){
         PUSH.src.postMessage({ att:"push-sub", endpoint: sub.endpoint }, "*");
       });
-    }).catch(function(err){ pushCard("開啟失敗", "錯誤：" + (err && err.message || err), [["知道了", pushClose, "pri"]]); });
+    }).catch(function(err){
+      var m = String(err && err.message || err);
+      // 常見錯誤換成看得懂的說明
+      if (/push service error|push service not available|AbortError/i.test(m))
+        pushCard("這支手機目前連不上通知服務", "Android 的網頁通知要透過 Google 的通知服務。請確認：1. 用 Chrome 瀏覽器打開並加入主畫面；2. 手機有「Google Play 服務」且已更新（部分華為等手機沒有，就無法使用）；3. 公司 Wi-Fi 可能擋住通知服務，請改用行動網路再試一次。（" + m + "）", [["知道了", pushClose, "pri"]]);
+      else if (/permission|denied/i.test(m))
+        pushCard("通知權限沒有開", "請到手機「設定」→「應用程式」→ 瀏覽器（例如 Chrome）→「通知」，允許通知後再試一次。（" + m + "）", [["知道了", pushClose, "pri"]]);
+      else pushCard("開啟失敗", "錯誤：" + m, [["知道了", pushClose, "pri"]]);
+    });
   }
   function pushOff(sub){
     var ep = sub.endpoint;
