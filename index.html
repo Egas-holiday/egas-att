@@ -184,7 +184,7 @@
 
 
   /* 告訴網頁目前手機通知的狀態（顯示在「通知」按鈕上） */
-  var STATE_SRC = null;
+  var STATE_SRC = null, PUSH_EP = "";
   function pushState(){
     return new Promise(function(done){
       var noSupport = !("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window);
@@ -192,13 +192,13 @@
       if (noSupport) return done("unsupported");
       if (Notification.permission === "denied") return done("denied");
       navigator.serviceWorker.getRegistration().then(function(reg){ return reg ? reg.pushManager.getSubscription() : null; })
-        .then(function(sub){ done(sub && Notification.permission === "granted" ? "on" : "off"); })
+        .then(function(sub){ PUSH_EP = sub ? sub.endpoint : ""; done(sub && Notification.permission === "granted" ? "on" : "off"); })
         .catch(function(){ done("off"); });
     });
   }
   function sendState(src){
     src = src || STATE_SRC; if (!src) return;
-    pushState().then(function(st){ try { src.postMessage({ att:"push-state", state: st }, "*"); } catch(e){} });
+    pushState().then(function(st){ try { src.postMessage({ att:"push-state", state: st, endpoint: st === "on" ? PUSH_EP : "" }, "*"); } catch(e){} });
   }
 
   /* ───── 手機推播通知 ───── */
