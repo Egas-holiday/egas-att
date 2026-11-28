@@ -54,6 +54,17 @@
   #a2hs .ab{display:flex;gap:10px}
   #a2hs .ab button{flex:1;font:inherit;font-size:15.5px;font-weight:700;border-radius:12px;padding:12px;border:1px solid #cbd5e1;background:#f8fafc;color:#0f172a}
   #a2hs .ab button.pri{background:#3f7a52;border-color:#3f7a52;color:#fff}
+  #shBg{position:fixed;inset:0;z-index:70;background:#0f172a;display:flex;flex-direction:column;font-family:-apple-system,"Noto Sans TC",sans-serif;color:#fff}
+  #shBg .sh{display:flex;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top)) 14px 10px}
+  #shBg .sh b{flex:1;font-size:17px}
+  #shBg .sh button{font:inherit;font-size:15px;font-weight:700;color:#fff;background:#334155;border:0;border-radius:10px;padding:9px 14px}
+  #shBg .sb{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:4px 10px 10px}
+  #shBg .sb .it{margin-bottom:14px}
+  #shBg .sb .it span{display:block;font-size:13px;color:#94a3b8;margin:0 2px 6px}
+  #shBg .sb img{display:block;width:100%;height:auto;background:#fff;border-radius:6px;-webkit-touch-callout:default}
+  #shBg .sf{padding:12px 14px calc(14px + env(safe-area-inset-bottom));background:#111c33;border-top:1px solid #1e293b}
+  #shBg .sf button{width:100%;font:inherit;font-size:17px;font-weight:800;border:0;border-radius:14px;padding:15px;background:#3f7a52;color:#fff}
+  #shBg .sf p{margin:10px 2px 0;font-size:13px;line-height:1.6;color:#94a3b8;text-align:center}
   .msg{font-family:-apple-system,"Noto Sans TC",sans-serif;color:#e2e8f0;padding:40px 24px;line-height:1.7}
 </style>
 </head>
@@ -63,6 +74,41 @@
   var GAS_URL = "https://script.google.com/macros/s/AKfycbwwm1j428gBgtsh-kMHKP2q2OQa5G-b_RX-Avwy_XfqmRwlPGzYHZdoOOg-XHJAQl0Y/exec";
 
 
+
+  /* ───── 報表圖片：在最外層顯示，按一下用手機的分享選單傳到 LINE 或存到照片 ───── */
+  function dataFile(u, name){
+    var b = atob(u.split(",")[1]), a = new Uint8Array(b.length);
+    for (var i = 0; i < b.length; i++) a[i] = b.charCodeAt(i);
+    return new File([a], name, { type: "image/png" });
+  }
+  function showShare(list){
+    var old = document.getElementById("shBg"); if (old) old.remove();
+    var files = [];
+    try { files = list.map(function(x){ return dataFile(x.url, x.name); }); } catch(e){}
+    var can = false;
+    try { can = !!(navigator.canShare && files.length && navigator.canShare({ files: files })); } catch(e){}
+    var bg = document.createElement("div"); bg.id = "shBg";
+    bg.innerHTML = '<div class="sh"><b>報表圖片</b><button type="button" data-x>關閉</button></div><div class="sb"></div>'
+      + '<div class="sf">' + (can ? '<button type="button" data-s>分享' + (list.length > 1 ? " " + list.length + " 張圖片" : "圖片") + '</button><p>選 LINE 傳給聊天室，或選「儲存影像」存到相簿</p>'
+                                  : '<p>長按圖片，選「儲存到照片」或「分享」</p>') + '</div>';
+    var sb = bg.querySelector(".sb");
+    list.forEach(function(x){
+      var it = document.createElement("div"); it.className = "it";
+      var sp = document.createElement("span"); sp.textContent = String(x.sh || "");
+      var im = document.createElement("img"); im.src = x.url; im.alt = String(x.sh || "") + "報表";
+      it.appendChild(sp); it.appendChild(im); sb.appendChild(it);
+    });
+    document.body.appendChild(bg);
+    bg.querySelector("[data-x]").onclick = function(){ bg.remove(); };
+    var sbtn = bg.querySelector("[data-s]");
+    if (sbtn) sbtn.onclick = function(){
+      navigator.share({ files: files }).catch(function(err){
+        if (err && err.name === "AbortError") return;   // 使用者自己取消
+        // 一次分享多張失敗時，改成一張一張分享
+        if (files.length > 1) navigator.share({ files: [files[0]] }).catch(function(){});
+      });
+    };
+  }
 
   /* ───── 教學影片：在最外層播放（影片放在這個網站的 videos 資料夾）───── */
   function playVideo(d, src){
@@ -233,7 +279,7 @@
     var f = document.createElement("iframe");
     // wrap=1 讓回報頁知道是從外框頁開啟（狀態列由這一頁處理）
     f.src = GAS_URL + q + "&wrap=1";
-    f.setAttribute("allow", "clipboard-write; clipboard-read; autoplay");
+    f.setAttribute("allow", "clipboard-write; clipboard-read; autoplay; web-share");
     f.title = "出勤回報";
     f.className = "wait";
     document.body.appendChild(f);
@@ -257,6 +303,11 @@
       if (d.att === "push-state-get"){ STATE_SRC = e.source; sendState(e.source); }
       if (d.att === "a2hs-show") showA2hs(true);
       if (d.att === "video-play") playVideo(d, e.source);
+      if (d.att === "share-img" && Array.isArray(d.list)){
+        var ls = d.list.filter(function(x){ return x && /^data:image\/png;base64,/.test(String(x.url || "")); }).slice(0, 6)
+          .map(function(x){ return { url: String(x.url), sh: String(x.sh || "").slice(0, 10), name: String(x.name || "報表.png").replace(/[\\/:*?"<>|]/g, "_").slice(0, 60) }; });
+        if (ls.length){ showShare(ls); try { e.source.postMessage({ att:"share-ok" }, "*"); } catch(err){} }
+      }
       // 幫網頁記住設定（提醒開關、姓名、草稿等），關掉重開也不會不見
       if (d.att === "store-get"){
         var all = {};
