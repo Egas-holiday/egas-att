@@ -9,11 +9,18 @@ self.addEventListener("push", function(e){
     try {
       var g = p.get("g"), t = p.get("t");
       if (g && t){
+        // 很多支手機同時收到通知：每支隨機等 0～2.5 秒再讀，避免同時擠進 Apps Script（同時最多處理約 30 個）
+        await new Promise(function(ok){ setTimeout(ok, Math.random() * 2500); });
         var ctl = new AbortController(), timer = setTimeout(function(){ ctl.abort(); }, 5000);
         // 帶上這支手機的推播位址，讀取「發給這支手機」的內容（每位主管勾選的提醒單位不同）
         var ep = "";
         try { var sub = await self.registration.pushManager.getSubscription(); ep = sub ? sub.endpoint : ""; } catch (e2) {}
-        var r = await fetch(g + "?pushmsg=" + encodeURIComponent(t) + (ep ? "&ep=" + encodeURIComponent(ep) : "") + "&_=" + Date.now(), { cache: "no-store", signal: ctl.signal });
+        var url = g + "?pushmsg=" + encodeURIComponent(t) + (ep ? "&ep=" + encodeURIComponent(ep) : "") + "&_=" + Date.now();
+        var r = await fetch(url, { cache: "no-store", signal: ctl.signal });
+        if (!r.ok){   // 忙線時再試一次
+          await new Promise(function(ok){ setTimeout(ok, 1000 + Math.random() * 2000); });
+          r = await fetch(url, { cache: "no-store" });
+        }
         clearTimeout(timer);
         var j = await r.json();
         if (j && j.body){ body = j.body; if (j.title) title = j.title; }
