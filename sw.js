@@ -10,7 +10,10 @@ self.addEventListener("push", function(e){
       var g = p.get("g"), t = p.get("t");
       if (g && t){
         var ctl = new AbortController(), timer = setTimeout(function(){ ctl.abort(); }, 5000);
-        var r = await fetch(g + "?pushmsg=" + encodeURIComponent(t) + "&_=" + Date.now(), { cache: "no-store", signal: ctl.signal });
+        // 帶上這支手機的推播位址，讀取「發給這支手機」的內容（每位主管勾選的提醒單位不同）
+        var ep = "";
+        try { var sub = await self.registration.pushManager.getSubscription(); ep = sub ? sub.endpoint : ""; } catch (e2) {}
+        var r = await fetch(g + "?pushmsg=" + encodeURIComponent(t) + (ep ? "&ep=" + encodeURIComponent(ep) : "") + "&_=" + Date.now(), { cache: "no-store", signal: ctl.signal });
         clearTimeout(timer);
         var j = await r.json();
         if (j && j.body){ body = j.body; if (j.title) title = j.title; }
